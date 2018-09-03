@@ -3,7 +3,6 @@ package union
 import (
 	"fmt"
 	"io"
-	"log"
 	"path"
 	"path/filepath"
 	"strings"
@@ -218,7 +217,6 @@ func NewFs(name, root string, m configmap.Mapper) (fs.Fs, error) {
 		features = features.Mask(remote)
 	}
 	f.features = features
-	log.Printf("features = %+v", features)
 
 	return f, nil
 }
