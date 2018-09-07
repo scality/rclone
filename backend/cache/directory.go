@@ -18,6 +18,7 @@ type Directory struct {
 	Name         string `json:"name"`    // name of the directory
 	Dir          string `json:"dir"`     // abs path of the directory
 	CacheModTime int64  `json:"modTime"` // modification or creation time - IsZero for unknown
+	CacheChgTime int64  `json:"chgTime"` // change time - IsZero for unknown
 	CacheSize    int64  `json:"size"`    // size of directory and contents or -1 if unknown
 
 	CacheItems int64      `json:"items"`     // number of objects or -1 for unknown
@@ -115,9 +116,19 @@ func (d *Directory) ModTime() time.Time {
 	return time.Unix(0, d.CacheModTime)
 }
 
+// ChgTime returns the cached ChgTime
+func (d *Directory) ChgTime() time.Time {
+	return time.Unix(0, d.CacheChgTime)
+}
+
 // Size returns the cached Size
 func (d *Directory) Size() int64 {
 	return d.CacheSize
+}
+
+// Meta returns the meta of the file
+func (d *Directory) Meta() map[string]string {
+	return nil
 }
 
 // Items returns the cached Items

@@ -545,6 +545,16 @@ func (o *Object) Size() int64 {
 	return size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // ModTime returns the modification time of the object
 //
 // It attempts to read the objects mtime and if that isn't present the
@@ -568,10 +578,10 @@ func (o *Object) Remove() error {
 	return o.fs.yd.Delete(o.remotePath(), true)
 }
 
-// SetModTime sets the modification time of the local fs object
+// SetMeta sets the modification time of the local fs object
 //
 // Commits the datastore
-func (o *Object) SetModTime(modTime time.Time) error {
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]string) error {
 	remote := o.remotePath()
 	// set custom_property 'rclone_modified' of object to modTime
 	err := o.fs.yd.SetCustomProperty(remote, "rclone_modified", modTime.Format(time.RFC3339Nano))
@@ -617,7 +627,7 @@ func (o *Object) Update(in0 io.Reader, src fs.ObjectInfo, options ...fs.OpenOpti
 		o.modTime = modTime
 		o.md5sum = "" // according to unit tests after put the md5 is empty.
 		//and set modTime of uploaded file
-		err = o.SetModTime(modTime)
+		err = o.SetMeta(modTime, src.ChgTime(), src.Meta())
 	}
 	return err
 }

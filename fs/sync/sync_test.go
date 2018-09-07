@@ -420,9 +420,9 @@ func TestSyncAfterChangingModtimeOnlyWithNoUpdateModTime(t *testing.T) {
 		return
 	}
 
-	fs.Config.NoUpdateModTime = true
+	fs.Config.NoUpdateMeta = true
 	defer func() {
-		fs.Config.NoUpdateModTime = false
+		fs.Config.NoUpdateMeta = false
 	}()
 
 	file1 := r.WriteFile("empty space", "", t2)

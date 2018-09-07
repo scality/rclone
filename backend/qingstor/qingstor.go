@@ -842,8 +842,8 @@ func (o *Object) ModTime() time.Time {
 	return modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]string) error {
 	err := o.readMetaData()
 	if err != nil {
 		return err
@@ -852,7 +852,7 @@ func (o *Object) SetModTime(modTime time.Time) error {
 	mimeType := fs.MimeType(o)
 
 	if o.size >= maxSizeForCopy {
-		fs.Debugf(o, "SetModTime is unsupported for objects bigger than %v bytes", fs.SizeSuffix(maxSizeForCopy))
+		fs.Debugf(o, "SetMeta is unsupported for objects bigger than %v bytes", fs.SizeSuffix(maxSizeForCopy))
 		return nil
 	}
 	// Copy the object to itself to update the metadata
@@ -986,6 +986,16 @@ func (o *Object) Remote() string {
 // Size returns the size of the file
 func (o *Object) Size() int64 {
 	return o.size
+}
+
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
 }
 
 // MimeType of an Object if known, "" otherwise

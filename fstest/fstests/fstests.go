@@ -870,13 +870,13 @@ func Run(t *testing.T, opt *Opt) {
 		}
 	})
 
-	// TestObjectSetModTime tests that SetModTime works
-	t.Run("TestObjectSetModTime", func(t *testing.T) {
+	// TestObjectSetMeta tests that SetMeta works
+	t.Run("TestObjectSetMeta", func(t *testing.T) {
 		skipIfNotOk(t)
 		newModTime := fstest.Time("2011-12-13T14:15:16.999999999Z")
 		obj := findObject(t, remote, file1.Path)
-		err := obj.SetModTime(newModTime)
-		if err == fs.ErrorCantSetModTime || err == fs.ErrorCantSetModTimeWithoutDelete {
+		err := obj.SetMeta(newModTime, newModTime, nil)
+		if err == fs.ErrorCantSetMeta || err == fs.ErrorCantSetMetaWithoutDelete {
 			t.Log(err)
 			return
 		}

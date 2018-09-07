@@ -24,6 +24,7 @@ var (
 	showEncrypted bool
 	showOrigIDs   bool
 	noModTime     bool
+	noChgTime     bool
 )
 
 func init() {
@@ -31,6 +32,7 @@ func init() {
 	commandDefintion.Flags().BoolVarP(&recurse, "recursive", "R", false, "Recurse into the listing.")
 	commandDefintion.Flags().BoolVarP(&showHash, "hash", "", false, "Include hashes in the output (may take longer).")
 	commandDefintion.Flags().BoolVarP(&noModTime, "no-modtime", "", false, "Don't read the modification time (can speed things up).")
+	commandDefintion.Flags().BoolVarP(&noChgTime, "no-chgtime", "", false, "Don't read the change time (can speed things up).")
 	commandDefintion.Flags().BoolVarP(&showEncrypted, "encrypted", "M", false, "Show the encrypted names.")
 	commandDefintion.Flags().BoolVarP(&showOrigIDs, "original", "", false, "Show the ID of the underlying Object.")
 }
@@ -43,6 +45,7 @@ type lsJSON struct {
 	Size      int64
 	MimeType  string    `json:",omitempty"`
 	ModTime   Timestamp //`json:",omitempty"`
+	ChgTime   Timestamp //`json:",omitempty"`
 	IsDir     bool
 	Hashes    map[string]string `json:",omitempty"`
 	ID        string            `json:",omitempty"`
@@ -79,6 +82,7 @@ The output is an array of Items, where each Item looks like this
       "IsDir" : false,
       "MimeType" : "application/octet-stream",
       "ModTime" : "2017-05-31T16:15:57.034468261+01:00",
+      "ChgTime" : "2017-05-31T16:15:57.034468261+01:00",
       "Name" : "file.txt",
       "Encrypted" : "v0qpsdq8anpci8n929v3uu9338",
       "Path" : "full/path/goes/here/file.txt",
@@ -88,6 +92,8 @@ The output is an array of Items, where each Item looks like this
 If --hash is not specified the Hashes property won't be emitted.
 
 If --no-modtime is specified then ModTime will be blank.
+
+If --no-chgtime is specified then ChgTime will be blank.
 
 If --encrypted is not specified the Encrypted won't be emitted.
 
@@ -136,6 +142,9 @@ can be processed line by line as each item is written one to a line.
 					}
 					if !noModTime {
 						item.ModTime = Timestamp(entry.ModTime())
+					}
+					if !noChgTime {
+						item.ChgTime = Timestamp(entry.ChgTime())
 					}
 					if cipher != nil {
 						switch entry.(type) {

@@ -715,6 +715,16 @@ func (o *Object) Size() int64 {
 	return o.size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // MimeType of an Object if known, "" otherwise
 func (o *Object) MimeType() string {
 	return o.mimeType
@@ -754,9 +764,9 @@ func (o *Object) ModTime() time.Time {
 	return o.modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
-	return fs.ErrorCantSetModTime
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]string) error {
+	return fs.ErrorCantSetMeta
 }
 
 // Storable returns a boolean showing whether this object storable

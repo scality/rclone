@@ -139,13 +139,24 @@ func equal(src fs.ObjectInfo, dst fs.Object, sizeOnly, checkSum bool) bool {
 	}
 	srcModTime := src.ModTime()
 	dstModTime := dst.ModTime()
-	dt := dstModTime.Sub(srcModTime)
-	if dt < modifyWindow && dt > -modifyWindow {
-		fs.Debugf(src, "Size and modification time the same (differ by %s, within tolerance %s)", dt, modifyWindow)
-		return true
+	srcChgTime := src.ChgTime()
+	dstChgTime := dst.ChgTime()
+	srcMeta := src.Meta()
+	if (fs.Config.UseCtime) {
+		dt := dstChgTime.Sub(srcChgTime)
+		if dt < modifyWindow && dt > -modifyWindow {
+			fs.Debugf(src, "Size and change time the same (differ by %s, within tolerance %s)", dt, modifyWindow)
+			return true
+		}
+		fs.Debugf(src, "Changes times differ by %s: %v, %v", dt, srcModTime, dstModTime)
+	} else {
+		dt := dstModTime.Sub(srcModTime)
+		if dt < modifyWindow && dt > -modifyWindow {
+			fs.Debugf(src, "Size and modification time the same (differ by %s, within tolerance %s)", dt, modifyWindow)
+			return true
+		}
+		fs.Debugf(src, "Modification times differ by %s: %v, %v", dt, srcModTime, dstModTime)
 	}
-
-	fs.Debugf(src, "Modification times differ by %s: %v, %v", dt, srcModTime, dstModTime)
 
 	// Check if the hashes are the same
 	same, ht, _ := CheckHashes(src, dst)
@@ -159,7 +170,7 @@ func equal(src fs.ObjectInfo, dst fs.Object, sizeOnly, checkSum bool) bool {
 	}
 
 	// mod time differs but hash is the same to reset mod time if required
-	if !fs.Config.NoUpdateModTime {
+	if !fs.Config.NoUpdateMeta {
 		if fs.Config.DryRun {
 			fs.Logf(src, "Not updating modification time as --dry-run")
 		} else {
@@ -170,12 +181,12 @@ func equal(src fs.ObjectInfo, dst fs.Object, sizeOnly, checkSum bool) bool {
 				return false
 			}
 			// Update the mtime of the dst object here
-			err := dst.SetModTime(srcModTime)
-			if err == fs.ErrorCantSetModTime {
-				fs.Debugf(dst, "src and dst identical but can't set mod time without re-uploading")
+			err := dst.SetMeta(srcModTime, srcChgTime, srcMeta)
+			if err == fs.ErrorCantSetMeta {
+				fs.Debugf(dst, "src and dst identical but can't set mod time, chg time and meta without re-uploading")
 				return false
-			} else if err == fs.ErrorCantSetModTimeWithoutDelete {
-				fs.Debugf(dst, "src and dst identical but can't set mod time without deleting and re-uploading")
+			} else if err == fs.ErrorCantSetMetaWithoutDelete {
+				fs.Debugf(dst, "src and dst identical but can't set mod time, chg time and meta without deleting and re-uploading")
 				// Remove the file if BackupDir isn't set.  If BackupDir is set we would rather have the old file
 				// put in the BackupDir than deleted which is what will happen if we don't delete it.
 				if fs.Config.BackupDir == "" {

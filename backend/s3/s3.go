@@ -565,6 +565,8 @@ func init() {
 // Constants
 const (
 	metaMtime      = "Mtime"                       // the meta key to store mtime in - eg X-Amz-Meta-Mtime
+	metaCtime      = "Ctime"                       // the meta key to store ctime in - eg X-Amz-Meta-Ctime
+	metaAtime      = "Atime"                       // the meta key to store atime in - eg X-Amz-Meta-Atime
 	metaMD5Hash    = "Md5chksum"                   // the meta key to store md5hash in
 	listChunkSize  = 1000                          // number of items to read at once
 	maxRetries     = 10                            // number of retries to make of operations
@@ -1248,6 +1250,35 @@ func (o *Object) Size() int64 {
 	return o.bytes
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	if fs.Config.UseServerModTime {
+		return o.lastModified
+	}
+	err := o.readMetaData()
+	if err != nil {
+		fs.Logf(o, "Failed to read metadata: %v", err)
+		return time.Now()
+	}
+	// read ctime out of metadata if available
+	d, ok := o.meta[metaCtime]
+	if !ok || d == nil {
+		// fs.Debugf(o, "No metadata")
+		return o.lastModified
+	}
+	chgTime, err := swift.FloatStringToTime(*d)
+	if err != nil {
+		fs.Logf(o, "Failed to read ctime from object: %v", err)
+		return o.lastModified
+	}
+	return chgTime
+}
+
 // readMetaData gets the metadata if it hasn't already been fetched
 //
 // it also sets the info
@@ -1315,16 +1346,21 @@ func (o *Object) ModTime() time.Time {
 	return modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]string) error {
 	err := o.readMetaData()
 	if err != nil {
 		return err
 	}
 	o.meta[metaMtime] = aws.String(swift.TimeToFloatString(modTime))
-
+	o.meta[metaCtime] = aws.String(swift.TimeToFloatString(chgTime))
+	if (meta != nil) {
+		for key, value := range meta {
+			o.meta[key] = aws.String(value)
+		}
+	}
 	if o.bytes >= maxSizeForCopy {
-		fs.Debugf(o, "SetModTime is unsupported for objects bigger than %v bytes", fs.SizeSuffix(maxSizeForCopy))
+		fs.Debugf(o, "SetMeta is unsupported for objects bigger than %v bytes", fs.SizeSuffix(maxSizeForCopy))
 		return nil
 	}
 
@@ -1390,6 +1426,7 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 		return err
 	}
 	modTime := src.ModTime()
+	chgTime := src.ChgTime()
 	size := src.Size()
 
 	uploader := s3manager.NewUploader(o.fs.ses, func(u *s3manager.Uploader) {
@@ -1414,6 +1451,12 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 	// Set the mtime in the meta data
 	metadata := map[string]*string{
 		metaMtime: aws.String(swift.TimeToFloatString(modTime)),
+		metaCtime: aws.String(swift.TimeToFloatString(chgTime)),
+	}
+	if (src.Meta() != nil) {
+		for key, value := range src.Meta() {
+			metadata[key] = aws.String(value)
+		}
 	}
 
 	if !o.fs.opt.DisableChecksum && size > uploader.PartSize {

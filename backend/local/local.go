@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -110,7 +111,10 @@ type Object struct {
 	path    string // The local path - may not be properly UTF-8 encoded - for OS
 	size    int64  // file metadata - always present
 	mode    os.FileMode
-	modTime time.Time
+	modTime time.Time // Time of last content change
+	chgTime time.Time // Time of last metadata and attr change
+	accTime time.Time // Time of last access
+	meta    map[string]string // The object metadata if known - may be nil
 	hashes  map[hash.Type]string // Hashes
 }
 
@@ -198,10 +202,12 @@ func (f *Fs) newObject(remote, dstPath string) *Object {
 		dstPath = f.cleanPath(filepath.Join(f.root, remote))
 	}
 	remote = f.cleanRemote(remote)
+	m := map[string]string{}
 	return &Object{
 		fs:     f,
 		remote: remote,
 		path:   dstPath,
+		meta:   m,
 	}
 }
 
@@ -661,13 +667,23 @@ func (o *Object) Size() int64 {
 	return o.size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]string {
+	return o.meta
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return o.chgTime
+}
+
 // ModTime returns the modification time of the object
 func (o *Object) ModTime() time.Time {
 	return o.modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]string) error {
 	err := os.Chtimes(o.path, modTime, modTime)
 	if err != nil {
 		return err
@@ -842,8 +858,8 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 	o.hashes = hash.Sums()
 	o.fs.objectHashesMu.Unlock()
 
-	// Set the mtime
-	err = o.SetModTime(src.ModTime())
+	// Set the mtime, ctime and meta
+	err = o.SetMeta(src.ModTime(), src.ChgTime(), src.Meta())
 	if err != nil {
 		return err
 	}
@@ -852,10 +868,19 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 	return o.lstat()
 }
 
+func timespecToTime(ts syscall.Timespec) time.Time {
+	return time.Unix(int64(ts.Sec), int64(ts.Nsec))
+}
+
 // setMetadata sets the file info from the os.FileInfo passed in
 func (o *Object) setMetadata(info os.FileInfo) {
 	// Don't overwrite the info if we don't need to
 	// this avoids upsetting the race detector
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		fmt.Printf("Not a syscall.Stat_t")
+		return
+	}
 	if o.size != info.Size() {
 		o.size = info.Size()
 	}
@@ -864,6 +889,42 @@ func (o *Object) setMetadata(info os.FileInfo) {
 	}
 	if o.mode != info.Mode() {
 		o.mode = info.Mode()
+	}
+	if !o.chgTime.Equal(timespecToTime(stat.Ctim)) {
+		o.chgTime = timespecToTime(stat.Ctim)
+	}
+	if !o.accTime.Equal(timespecToTime(stat.Atim)) {
+		o.accTime = timespecToTime(stat.Atim)
+	}
+	if o.meta[fs.MetaSize] != fs.Int64ToString(stat.Size) {
+		o.meta[fs.MetaSize] = fs.Int64ToString(stat.Size)
+	}
+	if o.meta[fs.MetaDev] != fs.Uint64ToString(stat.Dev) {
+		o.meta[fs.MetaDev] = fs.Uint64ToString(stat.Dev)
+	}
+	if o.meta[fs.MetaIno] != fs.Uint64ToString(stat.Ino) {
+		o.meta[fs.MetaIno] = fs.Uint64ToString(stat.Ino)
+	}
+	if o.meta[fs.MetaNlink] != fs.Uint64ToString(stat.Nlink) {
+		o.meta[fs.MetaNlink] = fs.Uint64ToString(stat.Nlink)
+	}
+	if o.meta[fs.MetaMode] != fs.Uint32ToString(stat.Mode) {
+		o.meta[fs.MetaMode] = fs.Uint32ToString(stat.Mode)
+	}
+	if o.meta[fs.MetaUid] != fs.Uint32ToString(stat.Uid) {
+		o.meta[fs.MetaUid] = fs.Uint32ToString(stat.Uid)
+	}
+	if o.meta[fs.MetaGid] != fs.Uint32ToString(stat.Gid) {
+		o.meta[fs.MetaGid] = fs.Uint32ToString(stat.Gid)
+	}
+	if o.meta[fs.MetaRdev] != fs.Uint64ToString(stat.Rdev) {
+		o.meta[fs.MetaRdev] = fs.Uint64ToString(stat.Rdev)
+	}
+	if o.meta[fs.MetaBlksize] != fs.Int64ToString(stat.Blksize) {
+		o.meta[fs.MetaBlksize] = fs.Int64ToString(stat.Blksize)
+	}
+	if o.meta[fs.MetaBlocks] != fs.Int64ToString(stat.Blocks) {
+		o.meta[fs.MetaBlocks] = fs.Int64ToString(stat.Blocks)
 	}
 }
 

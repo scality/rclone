@@ -104,7 +104,7 @@ func TestMemoryObject(t *testing.T) {
 	assert.Equal(t, "3e2e95f5ad970eadfa7e17eaf73da97024aa5359", Hash)
 
 	newNow := now.Add(time.Minute)
-	err = o.SetModTime(newNow)
+	err = o.SetMeta(newNow, newNow, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, newNow, o.ModTime())
 

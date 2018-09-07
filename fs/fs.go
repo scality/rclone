@@ -48,8 +48,8 @@ var (
 	ErrorCantMove                    = errors.New("can't move object - incompatible remotes")
 	ErrorCantDirMove                 = errors.New("can't move directory - incompatible remotes")
 	ErrorDirExists                   = errors.New("can't copy directory - destination already exists")
-	ErrorCantSetModTime              = errors.New("can't set modified time")
-	ErrorCantSetModTimeWithoutDelete = errors.New("can't set modified time without deleting existing object")
+	ErrorCantSetMeta                 = errors.New("can't set meta")
+	ErrorCantSetMetaWithoutDelete    = errors.New("can't set modified time and meta without deleting existing object")
 	ErrorDirNotFound                 = errors.New("directory not found")
 	ErrorObjectNotFound              = errors.New("object not found")
 	ErrorLevelNotSupported           = errors.New("level value not supported")
@@ -176,6 +176,35 @@ type OptionExample struct {
 	Provider string
 }
 
+// Additional metadata
+const (
+	MetaDev		= "Dev"
+	MetaIno		= "Ino"
+	MetaNlink	= "Nlink"
+	MetaMode	= "Mode"
+	MetaUid		= "Uid"
+	MetaGid		= "Gid"
+	MetaSize        = "Size"
+	MetaRdev        = "Rdev"
+	MetaBlksize     = "Blksize"
+	MetaBlocks      = "Blocks"
+)
+
+func Int64ToString(ns int64) string {
+        result := fmt.Sprintf("%d", ns)
+        return result
+}
+
+func Uint64ToString(ns uint64) string {
+        result := fmt.Sprintf("%d", ns)
+        return result
+}
+
+func Uint32ToString(ns uint32) string {
+        result := fmt.Sprintf("%d", ns)
+        return result
+}
+
 // Register a filesystem
 //
 // Fs modules  should use this in an init() function
@@ -249,8 +278,8 @@ type Info interface {
 type Object interface {
 	ObjectInfo
 
-	// SetModTime sets the metadata on the object to set the modification date
-	SetModTime(time.Time) error
+	// SetMeta sets the modtime, chgTime and meta key/values on the object
+	SetMeta(modTime time.Time, chgTime time.Time, meta map[string]string) error
 
 	// Open opens the file for read.  Call Close() on the returned io.ReadCloser
 	Open(options ...OpenOption) (io.ReadCloser, error)
@@ -291,8 +320,14 @@ type DirEntry interface {
 	// It should return a best guess if one isn't available
 	ModTime() time.Time
 
+	// ChgTime return the metadata and attributes change date
+	// of the file
+	ChgTime() time.Time
+	
 	// Size returns the size of the file
 	Size() int64
+
+	Meta() map[string]string
 }
 
 // Directory is a filesystem like directory provided by an Fs

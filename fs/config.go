@@ -62,7 +62,7 @@ type ConfigInfo struct {
 	MaxDepth              int
 	IgnoreSize            bool
 	IgnoreChecksum        bool
-	NoUpdateModTime       bool
+	NoUpdateMeta          bool
 	DataRateUnit          string
 	BackupDir             string
 	Suffix                string
@@ -84,6 +84,7 @@ type ConfigInfo struct {
 	MaxBacklog            int
 	StatsOneLine          bool
 	Progress              bool
+	UseCtime              bool
 }
 
 // NewConfig creates a new config with everything set to the default
