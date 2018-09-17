@@ -329,36 +329,38 @@ func Copy(f fs.Fs, dst fs.Object, remote string, src fs.Object) (newDst fs.Objec
 		return newDst, err
 	}
 
-	// Verify sizes are the same after transfer
-	if sizeDiffers(src, dst) {
-		err = errors.Errorf("corrupted on transfer: sizes differ %d vs %d", src.Size(), dst.Size())
-		fs.Errorf(dst, "%v", err)
-		fs.CountError(err)
-		removeFailedCopy(dst)
-		return newDst, err
-	}
-
-	// Verify hashes are the same after transfer - ignoring blank hashes
-	// TODO(klauspost): This could be extended, so we always create a hash type matching
-	// the destination, and calculate it while sending.
-	if hashType != hash.None {
-		var srcSum string
-		srcSum, err = src.Hash(hashType)
-		if err != nil {
+	if (!fs.Config.MdOnly) {
+		// Verify sizes are the same after transfer
+		if sizeDiffers(src, dst) {
+			err = errors.Errorf("corrupted on transfer: sizes differ %d vs %d", src.Size(), dst.Size())
+			fs.Errorf(dst, "%v", err)
 			fs.CountError(err)
-			fs.Errorf(src, "Failed to read src hash: %v", err)
-		} else if srcSum != "" {
-			var dstSum string
-			dstSum, err = dst.Hash(hashType)
+			removeFailedCopy(dst)
+			return newDst, err
+		}
+
+		// Verify hashes are the same after transfer - ignoring blank hashes
+		// TODO(klauspost): This could be extended, so we always create a hash type matching
+		// the destination, and calculate it while sending.
+		if hashType != hash.None {
+			var srcSum string
+			srcSum, err = src.Hash(hashType)
 			if err != nil {
 				fs.CountError(err)
-				fs.Errorf(dst, "Failed to read hash: %v", err)
-			} else if !fs.Config.IgnoreChecksum && !hash.Equals(srcSum, dstSum) {
-				err = errors.Errorf("corrupted on transfer: %v hash differ %q vs %q", hashType, srcSum, dstSum)
-				fs.Errorf(dst, "%v", err)
-				fs.CountError(err)
-				removeFailedCopy(dst)
-				return newDst, err
+				fs.Errorf(src, "Failed to read src hash: %v", err)
+			} else if srcSum != "" {
+				var dstSum string
+				dstSum, err = dst.Hash(hashType)
+				if err != nil {
+					fs.CountError(err)
+					fs.Errorf(dst, "Failed to read hash: %v", err)
+				} else if !fs.Config.IgnoreChecksum && !hash.Equals(srcSum, dstSum) {
+					err = errors.Errorf("corrupted on transfer: %v hash differ %q vs %q", hashType, srcSum, dstSum)
+					fs.Errorf(dst, "%v", err)
+					fs.CountError(err)
+					removeFailedCopy(dst)
+					return newDst, err
+				}
 			}
 		}
 	}

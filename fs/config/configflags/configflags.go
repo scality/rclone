@@ -87,6 +87,7 @@ func AddFlags(flagSet *pflag.FlagSet) {
 	flags.BoolVarP(flagSet, &fs.Config.StatsOneLine, "stats-one-line", "", fs.Config.StatsOneLine, "Make the stats fit on one line.")
 	flags.BoolVarP(flagSet, &fs.Config.Progress, "progress", "P", fs.Config.Progress, "Show progress during transfer.")
 	flags.BoolVarP(flagSet, &fs.Config.UseCtime, "use-ctime", "", fs.Config.UseCtime, "Use change time instead of mod time for operations.")
+	flags.BoolVarP(flagSet, &fs.Config.MdOnly, "md-only", "", fs.Config.MdOnly, "Only upload metadata changes.")
 }
 
 // SetFlags converts any flags into config which weren't straight foward

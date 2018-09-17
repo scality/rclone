@@ -14,6 +14,7 @@ What happens if you CTRL-C a multipart upload
 */
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -1473,29 +1474,56 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 
 	// Guess the content type
 	mimeType := fs.MimeType(src)
-
+	
 	key := o.fs.root + o.remote
-	req := s3manager.UploadInput{
-		Bucket:      &o.fs.bucket,
-		ACL:         &o.fs.opt.ACL,
-		Key:         &key,
-		Body:        in,
-		ContentType: &mimeType,
-		Metadata:    metadata,
-		//ContentLength: &size,
-	}
-	if o.fs.opt.ServerSideEncryption != "" {
-		req.ServerSideEncryption = &o.fs.opt.ServerSideEncryption
-	}
-	if o.fs.opt.SSEKMSKeyID != "" {
-		req.SSEKMSKeyId = &o.fs.opt.SSEKMSKeyID
-	}
-	if o.fs.opt.StorageClass != "" {
-		req.StorageClass = &o.fs.opt.StorageClass
-	}
-	_, err = uploader.Upload(&req)
-	if err != nil {
-		return err
+
+	if fs.Config.MdOnly {
+		fs.Debugf(o, "copying MD only");
+		req := s3.PutObjectInput{
+			Bucket:		&o.fs.bucket,
+			ACL:            &o.fs.opt.ACL,
+			Key:		&key,
+			Body:           bytes.NewReader([]byte("")),
+			Metadata:       metadata,
+			ContentLength:  aws.Int64(0),
+		}
+		if o.fs.opt.ServerSideEncryption != "" {
+			req.ServerSideEncryption = &o.fs.opt.ServerSideEncryption
+		}
+		if o.fs.opt.SSEKMSKeyID != "" {
+			req.SSEKMSKeyId = &o.fs.opt.SSEKMSKeyID
+		}
+		if o.fs.opt.StorageClass != "" {
+			req.StorageClass = &o.fs.opt.StorageClass
+		}
+
+		_, err := o.fs.c.PutObject(&req)
+		if err != nil {
+			return err
+		}
+	} else {
+		req := s3manager.UploadInput{
+			Bucket:      &o.fs.bucket,
+			ACL:         &o.fs.opt.ACL,
+			Key:         &key,
+			Body:        in,
+			ContentType: &mimeType,
+			Metadata:    metadata,
+			//ContentLength: &size,
+		}
+		if o.fs.opt.ServerSideEncryption != "" {
+			req.ServerSideEncryption = &o.fs.opt.ServerSideEncryption
+		}
+		if o.fs.opt.SSEKMSKeyID != "" {
+			req.SSEKMSKeyId = &o.fs.opt.SSEKMSKeyID
+		}
+		if o.fs.opt.StorageClass != "" {
+			req.StorageClass = &o.fs.opt.StorageClass
+		}
+		_, err = uploader.Upload(&req)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Read the metadata from the newly created object
