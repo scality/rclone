@@ -1460,9 +1460,9 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 		}
 	}
 
-	if !o.fs.opt.DisableChecksum && size > uploader.PartSize {
+	if !o.fs.opt.DisableChecksum && size > uploader.PartSize ||
+		fs.Config.ForceMd5 {
 		hash, err := src.Hash(hash.MD5)
-
 		if err == nil && matchMd5.MatchString(hash) {
 			hashBytes, err := hex.DecodeString(hash)
 

@@ -86,6 +86,7 @@ type ConfigInfo struct {
 	Progress              bool
 	UseCtime              bool
 	MdOnly		      bool
+	ForceMd5	      bool
 }
 
 // NewConfig creates a new config with everything set to the default

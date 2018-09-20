@@ -88,6 +88,7 @@ func AddFlags(flagSet *pflag.FlagSet) {
 	flags.BoolVarP(flagSet, &fs.Config.Progress, "progress", "P", fs.Config.Progress, "Show progress during transfer.")
 	flags.BoolVarP(flagSet, &fs.Config.UseCtime, "use-ctime", "", fs.Config.UseCtime, "Use change time instead of mod time for operations.")
 	flags.BoolVarP(flagSet, &fs.Config.MdOnly, "md-only", "", fs.Config.MdOnly, "Only upload metadata changes.")
+	flags.BoolVarP(flagSet, &fs.Config.ForceMd5, "force-md5", "", fs.Config.ForceMd5, "Force the upload of the Md5.")
 }
 
 // SetFlags converts any flags into config which weren't straight foward
