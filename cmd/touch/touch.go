@@ -64,7 +64,7 @@ func Touch(fsrc fs.Fs, srcFileName string) error {
 		}
 		return nil
 	}
-	err = file.SetModTime(timeAtr)
+	err = file.SetMeta(timeAtr, timeAtr, nil)
 	if err != nil {
 		return errors.Wrap(err, "touch: couldn't set mod time")
 	}

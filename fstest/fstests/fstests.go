@@ -1222,6 +1222,46 @@ func Run(t *testing.T, opt *Opt) {
 				file1Contents = contents
 			})
 
+			// TestObjectMimeType tests the MimeType of the object is correct
+			t.Run("TestObjectMimeType", func(t *testing.T) {
+				skipIfNotOk(t)
+				obj := findObject(t, remote, file1.Path)
+				do, ok := obj.(fs.MimeTyper)
+				if !ok {
+					t.Skip("MimeType method not supported")
+				}
+				mimeType := do.MimeType()
+				if strings.ContainsRune(mimeType, ';') {
+					assert.Equal(t, "text/plain; charset=utf-8", mimeType)
+				} else {
+					assert.Equal(t, "text/plain", mimeType)
+				}
+			})
+
+			// TestObjectSetMeta tests that SetMeta works
+			t.Run("TestObjectSetMeta", func(t *testing.T) {
+				skipIfNotOk(t)
+				newModTime := fstest.Time("2011-12-13T14:15:16.999999999Z")
+				obj := findObject(t, remote, file1.Path)
+				err := obj.SetMeta(newModTime, newModTime, nil)
+				if err == fs.ErrorCantSetMeta || err == fs.ErrorCantSetMetaWithoutDelete {
+					t.Log(err)
+					return
+				}
+				require.NoError(t, err)
+				file1.ModTime = newModTime
+				file1.CheckModTime(t, obj, obj.ModTime(), remote.Precision())
+				// And make a new object and read it from there too
+				TestObjectModTime(t)
+			})
+
+			// TestObjectSize tests that Size works
+			t.Run("TestObjectSize", func(t *testing.T) {
+				skipIfNotOk(t)
+				obj := findObject(t, remote, file1.Path)
+				assert.Equal(t, file1.Size, obj.Size())
+			})
+
 			// TestObjectStorable tests that Storable works
 			t.Run("ObjectStorable", func(t *testing.T) {
 				skipIfNotOk(t)

@@ -919,6 +919,16 @@ func (o *Object) Size() int64 {
 	return o.size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // setMetaData sets the metadata from info
 func (o *Object) setMetaData(info *api.Item) (err error) {
 	if info.IsFolder {
@@ -971,11 +981,11 @@ func (o *Object) ModTime() time.Time {
 	return o.modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	// Pcloud doesn't have a way of doing this so returning this
 	// error will cause the file to be re-uploaded to set the time.
-	return fs.ErrorCantSetModTime
+	return fs.ErrorCantSetMeta
 }
 
 // Storable returns a boolean showing whether this object storable

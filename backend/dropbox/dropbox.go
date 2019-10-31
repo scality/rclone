@@ -892,6 +892,16 @@ func (o *Object) Size() int64 {
 	return o.bytes
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // setMetadataFromEntry sets the fs data from a files.FileMetadata
 //
 // This isn't a complete set of metadata and has an inacurate date
@@ -947,14 +957,14 @@ func (o *Object) ModTime() time.Time {
 	return o.modTime
 }
 
-// SetModTime sets the modification time of the local fs object
+// SetMeta sets the modification time of the local fs object
 //
 // Commits the datastore
-func (o *Object) SetModTime(modTime time.Time) error {
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	// Dropbox doesn't have a way of doing this so returning this
 	// error will cause the file to be deleted first then
 	// re-uploaded to set the time.
-	return fs.ErrorCantSetModTimeWithoutDelete
+	return fs.ErrorCantSetMetaWithoutDelete
 }
 
 // Storable returns whether this object is storable

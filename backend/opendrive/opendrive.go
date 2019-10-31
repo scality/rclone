@@ -837,6 +837,16 @@ func (o *Object) Size() int64 {
 	return o.size // Object is likely PENDING
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // ModTime returns the modification time of the object
 //
 //
@@ -846,9 +856,9 @@ func (o *Object) ModTime() time.Time {
 	return o.modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
-	// fs.Debugf(nil, "SetModTime(%v)", modTime.String())
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
+	// fs.Debugf(nil, "SetMeta(%v)", modTime.String())
 	opts := rest.Opts{
 		Method:     "PUT",
 		NoResponse: true,
@@ -1053,7 +1063,7 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 	o.size = closeResponse.Size
 
 	// Set the mod time now
-	err = o.SetModTime(modTime)
+	err = o.SetMeta(modTime, src.ChgTime(), src.Meta())
 	if err != nil {
 		return err
 	}

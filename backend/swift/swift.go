@@ -861,6 +861,16 @@ func (o *Object) Size() int64 {
 	return o.info.Bytes
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil; // TBD
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // readMetaData gets the metadata if it hasn't already been fetched
 //
 // it also sets the info
@@ -909,8 +919,8 @@ func (o *Object) ModTime() time.Time {
 	return modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, m map[string]*string) error {
 	err := o.readMetaData()
 	if err != nil {
 		return err

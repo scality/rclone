@@ -40,6 +40,7 @@ func (t Timestamp) MarshalJSON() (out []byte, err error) {
 type ListJSONOpt struct {
 	Recurse       bool `json:"recurse"`
 	NoModTime     bool `json:"noModTime"`
+	NoChgTime     bool `json:"noChgTime"`
 	ShowEncrypted bool `json:"showEncrypted"`
 	ShowOrigIDs   bool `json:"showOrigIDs"`
 	ShowHash      bool `json:"showHash"`

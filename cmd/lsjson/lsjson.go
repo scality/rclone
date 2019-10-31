@@ -21,6 +21,7 @@ func init() {
 	commandDefintion.Flags().BoolVarP(&opt.Recurse, "recursive", "R", false, "Recurse into the listing.")
 	commandDefintion.Flags().BoolVarP(&opt.ShowHash, "hash", "", false, "Include hashes in the output (may take longer).")
 	commandDefintion.Flags().BoolVarP(&opt.NoModTime, "no-modtime", "", false, "Don't read the modification time (can speed things up).")
+	commandDefintion.Flags().BoolVarP(&opt.NoChgTime, "no-chgtime", "", false, "Don't read the change time (can speed things up).")
 	commandDefintion.Flags().BoolVarP(&opt.ShowEncrypted, "encrypted", "M", false, "Show the encrypted names.")
 	commandDefintion.Flags().BoolVarP(&opt.ShowOrigIDs, "original", "", false, "Show the ID of the underlying Object.")
 }
@@ -43,6 +44,7 @@ The output is an array of Items, where each Item looks like this
       "IsDir" : false,
       "MimeType" : "application/octet-stream",
       "ModTime" : "2017-05-31T16:15:57.034468261+01:00",
+      "ChgTime" : "2017-05-31T16:15:57.034468261+01:00",
       "Name" : "file.txt",
       "Encrypted" : "v0qpsdq8anpci8n929v3uu9338",
       "Path" : "full/path/goes/here/file.txt",
@@ -52,6 +54,8 @@ The output is an array of Items, where each Item looks like this
 If --hash is not specified the Hashes property won't be emitted.
 
 If --no-modtime is specified then ModTime will be blank.
+
+If --no-chgtime is specified then ChgTime will be blank.
 
 If --encrypted is not specified the Encrypted won't be emitted.
 

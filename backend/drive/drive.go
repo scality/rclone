@@ -2251,6 +2251,30 @@ func (f *Fs) getRemoteInfo(remote string) (info *drive.File, err error) {
 	return
 }
 
+// Meta returns the meta of the file
+func (o *baseObject) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *baseObject) ChgTime() time.Time {
+	return time.Now()
+}
+
+// setMetaData sets the fs data from a drive.File
+func (o *Object) setMetaData(info *drive.File) {
+	o.id = info.Id
+	o.url = fmt.Sprintf("%sfiles/%s?alt=media", o.fs.svc.BasePath, info.Id)
+	o.md5sum = strings.ToLower(info.Md5Checksum)
+	o.bytes = info.Size
+	if o.fs.opt.UseCreatedDate {
+		o.modifiedDate = info.CreatedTime
+	} else {
+		o.modifiedDate = info.ModifiedTime
+	}
+	o.mimeType = info.MimeType
+}
+
 // getRemoteInfoWithExport returns a drive.File and the export settings for the remote
 func (f *Fs) getRemoteInfoWithExport(remote string) (
 	info *drive.File, extension, exportName, exportMimeType string, isDocument bool, err error) {
@@ -2302,8 +2326,8 @@ func (o *baseObject) ModTime() time.Time {
 	return modTime
 }
 
-// SetModTime sets the modification time of the drive fs object
-func (o *baseObject) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the drive fs object
+func (o *baseObject) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	// New metadata
 	updateInfo := &drive.File{
 		ModifiedTime: modTime.Format(timeFormatOut),

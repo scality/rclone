@@ -6,7 +6,9 @@ import "time"
 type Dir struct {
 	remote  string    // name of the directory
 	modTime time.Time // modification or creation time - IsZero for unknown
+	chgTime time.Time // change time - IsZero for unknown
 	size    int64     // size of directory and contents or -1 if unknown
+	meta    map[string]*string // The object metadata if known - may be nil
 	items   int64     // number of objects or -1 for unknown
 	id      string    // optional ID
 }
@@ -67,9 +69,22 @@ func (d *Dir) ModTime() time.Time {
 	return time.Now()
 }
 
+// ChgTime returns the change date of the file
+func (d *Dir) ChgTime() time.Time {
+	if !d.chgTime.IsZero() {
+		return d.chgTime
+	}
+	return time.Now()
+}
+
 // Size returns the size of the file
 func (d *Dir) Size() int64 {
 	return d.size
+}
+
+// Meta returns the meta of the file
+func (d *Dir) Meta() map[string]*string {
+	return d.meta
 }
 
 // SetSize sets the size of the directory

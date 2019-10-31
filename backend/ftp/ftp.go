@@ -612,13 +612,23 @@ func (o *Object) Size() int64 {
 	return int64(o.info.Size)
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // ModTime returns the modification time of the object
 func (o *Object) ModTime() time.Time {
 	return o.info.ModTime
 }
 
-// SetModTime sets the modification time of the object
-func (o *Object) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	return nil
 }
 

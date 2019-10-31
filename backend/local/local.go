@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unicode/utf8"
 
@@ -26,7 +28,19 @@ import (
 )
 
 // Constants
-const devUnset = 0xdeadbeefcafebabe // a device id meaning it is unset
+const (
+	devUnset    = 0xdeadbeefcafebabe // a device id meaning it is unset
+	MetaDev	    = "Dev"
+	MetaIno	    = "Ino"
+	MetaNlink   = "Nlink"
+	MetaMode    = "Mode"
+	MetaUid     = "Uid"
+	MetaGid     = "Gid"
+	MetaSize    = "Size"
+	MetaRdev    = "Rdev"
+	MetaBlksize = "Blksize"
+	MetaBlocks  = "Blocks"
+)
 
 // Register with Fs
 func init() {
@@ -124,7 +138,10 @@ type Object struct {
 	path    string // The local path - may not be properly UTF-8 encoded - for OS
 	size    int64  // file metadata - always present
 	mode    os.FileMode
-	modTime time.Time
+	modTime time.Time // Time of last content change
+	chgTime time.Time // Time of last metadata and attr change
+	accTime time.Time // Time of last access
+	meta    map[string]*string // The object metadata if known - may be nil
 	hashes  map[hash.Type]string // Hashes
 }
 
@@ -212,10 +229,12 @@ func (f *Fs) newObject(remote, dstPath string) *Object {
 		dstPath = f.cleanPath(filepath.Join(f.root, remote))
 	}
 	remote = f.cleanRemote(remote)
+	m := map[string]*string{}
 	return &Object{
 		fs:     f,
 		remote: remote,
 		path:   dstPath,
+		meta:   m,
 	}
 }
 
@@ -675,13 +694,23 @@ func (o *Object) Size() int64 {
 	return o.size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return o.meta
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return o.chgTime
+}
+
 // ModTime returns the modification time of the object
 func (o *Object) ModTime() time.Time {
 	return o.modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	err := os.Chtimes(o.path, modTime, modTime)
 	if err != nil {
 		return err
@@ -862,8 +891,8 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 	o.hashes = hash.Sums()
 	o.fs.objectHashesMu.Unlock()
 
-	// Set the mtime
-	err = o.SetModTime(src.ModTime())
+	// Set the mtime, ctime and meta
+	err = o.SetMeta(src.ModTime(), src.ChgTime(), src.Meta())
 	if err != nil {
 		return err
 	}
@@ -872,10 +901,31 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 	return o.lstat()
 }
 
+func timespecToTime(ts syscall.Timespec) time.Time {
+	return time.Unix(int64(ts.Sec), int64(ts.Nsec))
+}
+
 // setMetadata sets the file info from the os.FileInfo passed in
 func (o *Object) setMetadata(info os.FileInfo) {
 	// Don't overwrite the info if we don't need to
 	// this avoids upsetting the race detector
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		fmt.Printf("Not a syscall.Stat_t")
+		return
+	}
+	metadata := map[string]string{
+		MetaDev:     strconv.FormatUint(stat.Dev, 10),
+		MetaIno:     strconv.FormatUint(stat.Ino, 10),
+		MetaNlink:   strconv.FormatUint(stat.Nlink, 10),
+		MetaMode:    strconv.FormatUint(uint64(stat.Mode), 10),
+		MetaUid:     strconv.FormatUint(uint64(stat.Uid), 10),
+		MetaGid:     strconv.FormatUint(uint64(stat.Gid), 10),
+		MetaSize:    strconv.FormatInt(stat.Size, 10),
+		MetaRdev:    strconv.FormatUint(stat.Rdev, 10),
+		MetaBlksize: strconv.FormatInt(stat.Blksize, 10),
+		MetaBlocks:  strconv.FormatInt(stat.Blocks, 10),
+	}
 	if o.size != info.Size() {
 		o.size = info.Size()
 	}
@@ -884,6 +934,19 @@ func (o *Object) setMetadata(info os.FileInfo) {
 	}
 	if o.mode != info.Mode() {
 		o.mode = info.Mode()
+	}
+	if !o.chgTime.Equal(timespecToTime(stat.Ctim)) {
+		o.chgTime = timespecToTime(stat.Ctim)
+	}
+	if !o.accTime.Equal(timespecToTime(stat.Atim)) {
+		o.accTime = timespecToTime(stat.Atim)
+	}
+	for key, value := range metadata {
+		if o.meta[key] == nil {
+			o.meta[key] = &value
+		} else if *o.meta[key] != value {
+			o.meta[key] = &value
+		}
 	}
 }
 

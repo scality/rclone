@@ -402,6 +402,16 @@ func (o *Object) Size() int64 {
 	return o.size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // ModTime returns the modification time of the remote http file
 func (o *Object) ModTime() time.Time {
 	return o.modTime
@@ -430,10 +440,10 @@ func (o *Object) stat() error {
 	return nil
 }
 
-// SetModTime sets the modification and access time to the specified time
+// SetMeta sets the modification and access time to the specified time
 //
 // it also updates the info field
-func (o *Object) SetModTime(modTime time.Time) error {
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	return errorReadOnly
 }
 

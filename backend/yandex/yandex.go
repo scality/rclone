@@ -937,6 +937,16 @@ func (o *Object) readMetaData() (err error) {
 	return o.setMetaData(info)
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // ModTime returns the modification time of the object
 //
 // It attempts to read the objects mtime and if that isn't present the
@@ -995,10 +1005,10 @@ func (o *Object) setCustomProperty(property string, value string) (err error) {
 	return err
 }
 
-// SetModTime sets the modification time of the local fs object
+// SetMeta sets the modification time of the local fs object
 //
 // Commits the datastore
-func (o *Object) SetModTime(modTime time.Time) error {
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	// set custom_property 'rclone_modified' of object to modTime
 	err := o.setCustomProperty("rclone_modified", modTime.Format(time.RFC3339Nano))
 	if err != nil {
@@ -1112,7 +1122,7 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 	o.md5sum = ""                   // according to unit tests after put the md5 is empty.
 	o.size = int64(in1.BytesRead()) // better solution o.readMetaData() ?
 	//and set modTime of uploaded file
-	err = o.SetModTime(modTime)
+	err = o.SetMeta(modTime, src.ChgTime(), src.Meta())
 
 	return err
 }

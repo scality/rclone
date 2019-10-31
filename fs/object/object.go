@@ -37,6 +37,7 @@ func NewStaticObjectInfo(remote string, modTime time.Time, size int64, storable 
 type staticObjectInfo struct {
 	remote   string
 	modTime  time.Time
+	chgTime  time.Time
 	size     int64
 	storable bool
 	hashes   map[hash.Type]string
@@ -47,7 +48,9 @@ func (i *staticObjectInfo) Fs() fs.Info        { return i.fs }
 func (i *staticObjectInfo) Remote() string     { return i.remote }
 func (i *staticObjectInfo) String() string     { return i.remote }
 func (i *staticObjectInfo) ModTime() time.Time { return i.modTime }
+func (i *staticObjectInfo) ChgTime() time.Time { return i.chgTime }
 func (i *staticObjectInfo) Size() int64        { return i.size }
+func (i *staticObjectInfo) Meta() map[string]*string { return nil }
 func (i *staticObjectInfo) Storable() bool     { return i.storable }
 func (i *staticObjectInfo) Hash(h hash.Type) (string, error) {
 	if len(i.hashes) == 0 {
@@ -132,6 +135,8 @@ var _ fs.Fs = MemoryFs
 type MemoryObject struct {
 	remote  string
 	modTime time.Time
+	chgTime time.Time
+	meta    map[string]*string
 	content []byte
 }
 
@@ -169,9 +174,19 @@ func (o *MemoryObject) ModTime() time.Time {
 	return o.modTime
 }
 
+// ChgTime returns the change date of the file
+func (o *MemoryObject) ChgTime() time.Time {
+	return o.chgTime
+}
+
 // Size returns the size of the file
 func (o *MemoryObject) Size() int64 {
 	return int64(len(o.content))
+}
+
+// Meta returns the meta of the file
+func (o *MemoryObject) Meta() map[string]*string {
+	return nil
 }
 
 // Storable says whether this object can be stored
@@ -192,9 +207,11 @@ func (o *MemoryObject) Hash(h hash.Type) (string, error) {
 	return hash.Sums()[h], nil
 }
 
-// SetModTime sets the metadata on the object to set the modification date
-func (o *MemoryObject) SetModTime(modTime time.Time) error {
+// SetMeta sets the metadata on the object to set the modification date
+func (o *MemoryObject) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	o.modTime = modTime
+	o.chgTime = chgTime
+	o.meta = meta
 	return nil
 }
 

@@ -28,6 +28,7 @@ type Object struct {
 	Name          string               `json:"name"`     // name of the directory
 	Dir           string               `json:"dir"`      // abs path of the object
 	CacheModTime  int64                `json:"modTime"`  // modification or creation time - IsZero for unknown
+	CacheChgTime  int64                `json:"chgTime"`  // modification or creation time - IsZero for unknown
 	CacheSize     int64                `json:"size"`     // size of directory and contents or -1 if unknown
 	CacheStorable bool                 `json:"storable"` // says whether this object can be stored
 	CacheType     string               `json:"cacheType"`
@@ -59,6 +60,7 @@ func NewObject(f *Fs, remote string) *Object {
 		Name:          cleanPath(name),
 		Dir:           cleanPath(dir),
 		CacheModTime:  time.Now().UnixNano(),
+		CacheChgTime:  time.Now().UnixNano(),
 		CacheSize:     0,
 		CacheStorable: false,
 		CacheType:     cacheType,
@@ -188,18 +190,20 @@ func (o *Object) refreshFromSource(force bool) error {
 	return nil
 }
 
-// SetModTime sets the ModTime of this object
-func (o *Object) SetModTime(t time.Time) error {
+// SetMeta sets the ModTime of this object
+func (o *Object) SetMeta(t time.Time, t2 time.Time, m map[string]*string) error {
 	if err := o.refreshFromSource(false); err != nil {
 		return err
 	}
 
-	err := o.Object.SetModTime(t)
+	err := o.Object.SetMeta(t, t2, m)
 	if err != nil {
 		return err
 	}
 
 	o.CacheModTime = t.UnixNano()
+	o.CacheChgTime = t2.UnixNano()
+	// TBD cache meta
 	o.persist()
 	fs.Debugf(o, "updated ModTime: %v", t)
 

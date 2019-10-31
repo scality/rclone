@@ -89,6 +89,8 @@ type unknownDirEntry string
 func (o unknownDirEntry) String() string         { return string(o) }
 func (o unknownDirEntry) Remote() string         { return string(o) }
 func (o unknownDirEntry) ModTime() (t time.Time) { return t }
+func (o unknownDirEntry) ChgTime() (t time.Time) { return t }
+func (o unknownDirEntry) Meta() (m map[string]*string) { return m }
 func (o unknownDirEntry) Size() int64            { return 0 }
 
 func TestFilterAndSortUnknown(t *testing.T) {

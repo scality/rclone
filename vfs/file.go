@@ -304,11 +304,11 @@ func (f *File) applyPendingModTime() error {
 		return errors.New("Cannot apply ModTime, file object is not available")
 	}
 
-	err := f.o.SetModTime(f.pendingModTime)
+	err := f.o.SetMeta(f.pendingModTime, f.pendingModTime, nil)
 	switch err {
 	case nil:
 		fs.Debugf(f.o, "File.applyPendingModTime OK")
-	case fs.ErrorCantSetModTime, fs.ErrorCantSetModTimeWithoutDelete:
+	case fs.ErrorCantSetMeta, fs.ErrorCantSetMetaWithoutDelete:
 		// do nothing, in order to not break "touch somefile" if it exists already
 	default:
 		fs.Errorf(f, "File.applyPendingModTime error: %v", err)

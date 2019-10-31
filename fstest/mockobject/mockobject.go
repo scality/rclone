@@ -49,6 +49,14 @@ func (o Object) ModTime() (t time.Time) {
 	return t
 }
 
+func (o Object) ChgTime() (t time.Time) {
+	return t
+}
+
+func (o Object) Meta() (m map[string]*string) {
+	return m
+}
+
 // Size returns the size of the file
 func (o Object) Size() int64 { return 0 }
 
@@ -57,8 +65,8 @@ func (o Object) Storable() bool {
 	return true
 }
 
-// SetModTime sets the metadata on the object to set the modification date
-func (o Object) SetModTime(time.Time) error {
+// SetMeta sets the modification time of the local fs object
+func (o Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	return errNotImpl
 }
 

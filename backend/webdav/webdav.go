@@ -13,7 +13,7 @@ package webdav
 // https://github.com/nextcloud/server/issues/6129
 // owncloud seems to have checksums as metadata though - can read them
 
-// SetModTime might be possible
+// SetMeta might be possible
 // https://stackoverflow.com/questions/3579608/webdav-can-a-client-modify-the-mtime-of-a-file
 // ...support for a PROPSET to lastmodified (mind the missing get) which does the utime() call might be an option.
 // For example the ownCloud WebDAV server does it that way.
@@ -883,6 +883,16 @@ func (o *Object) Size() int64 {
 	return o.size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // setMetaData sets the metadata from info
 func (o *Object) setMetaData(info *api.Prop) (err error) {
 	o.hasMetaData = true
@@ -918,9 +928,9 @@ func (o *Object) ModTime() time.Time {
 	return o.modTime
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
-	return fs.ErrorCantSetModTime
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
+	return fs.ErrorCantSetMeta
 }
 
 // Storable returns a boolean showing whether this object storable

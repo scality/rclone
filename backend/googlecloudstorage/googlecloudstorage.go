@@ -804,6 +804,16 @@ func (o *Object) Size() int64 {
 	return o.bytes
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // setMetaData sets the fs data from a storage.Object
 func (o *Object) setMetaData(info *storage.Object) {
 	o.url = info.MediaLink
@@ -882,8 +892,8 @@ func metadataFromModTime(modTime time.Time) map[string]string {
 	return metadata
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) (err error) {
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) (err error) {
 	// This only adds metadata so will perserve other metadata
 	object := storage.Object{
 		Bucket:   o.fs.bucket,

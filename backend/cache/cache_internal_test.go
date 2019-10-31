@@ -673,7 +673,7 @@ func TestInternalChangeSeenAfterDirCacheFlush(t *testing.T) {
 	o, err := cfs.UnWrap().NewObject(runInstance.encryptRemoteIfNeeded(t, "data.bin"))
 	require.NoError(t, err)
 	wrappedTime := time.Now().Add(-1 * time.Hour)
-	err = o.SetModTime(wrappedTime)
+	err = o.SetMeta(wrappedTime, wrappedTime, nil)
 	require.NoError(t, err)
 
 	// get a new instance from the cache
@@ -716,7 +716,7 @@ func TestInternalChangeSeenAfterRc(t *testing.T) {
 	o, err := cfs.UnWrap().NewObject(runInstance.encryptRemoteIfNeeded(t, "data.bin"))
 	require.NoError(t, err)
 	wrappedTime := time.Now().Add(-1 * time.Hour)
-	err = o.SetModTime(wrappedTime)
+	err = o.SetMeta(wrappedTime, wrappedTime, nil)
 	require.NoError(t, err)
 
 	// get a new instance from the cache

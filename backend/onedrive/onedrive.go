@@ -901,7 +901,7 @@ func (f *Fs) Copy(src fs.Object, remote string) (fs.Object, error) {
 	// Copy does NOT copy the modTime from the source and there seems to
 	// be no way to set date before
 	// This will create TWO versions on OneDrive
-	err = dstObj.SetModTime(srcObj.ModTime())
+	err = dstObj.SetMeta(srcObj.ModTime(), srcObj.ChgTime(), srcObj.Meta())
 	if err != nil {
 		return nil, err
 	}
@@ -1196,6 +1196,16 @@ func (o *Object) Size() int64 {
 	return o.size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // setMetaData sets the metadata from info
 func (o *Object) setMetaData(info *api.Item) (err error) {
 	if info.GetFolder() != nil {
@@ -1298,8 +1308,8 @@ func (o *Object) setModTime(modTime time.Time) (*api.Item, error) {
 	return info, err
 }
 
-// SetModTime sets the modification time of the local fs object
-func (o *Object) SetModTime(modTime time.Time) error {
+// SetMeta sets the modification time of the local fs object
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	info, err := o.setModTime(modTime)
 	if err != nil {
 		return err

@@ -126,7 +126,7 @@ type Options struct {
 	DisableHashCheck  bool   `config:"disable_hashcheck"`
 	AskPassword       bool   `config:"ask_password"`
 	PathOverride      string `config:"path_override"`
-	SetModTime        bool   `config:"set_modtime"`
+	SetMeta           bool   `config:"set_meta"`
 }
 
 // Fs stores the interface to the remote SFTP files
@@ -828,6 +828,16 @@ func (o *Object) Size() int64 {
 	return o.size
 }
 
+// Meta returns the meta of the file
+func (o *Object) Meta() map[string]*string {
+	return nil
+}
+
+// ChgTime returns the change date of the file
+func (o *Object) ChgTime() time.Time {
+	return time.Now()
+}
+
 // ModTime returns the modification time of the remote sftp file
 func (o *Object) ModTime() time.Time {
 	return o.modTime
@@ -873,24 +883,24 @@ func (o *Object) stat() error {
 	return nil
 }
 
-// SetModTime sets the modification and access time to the specified time
+// SetMeta sets the modification and access time to the specified time
 //
 // it also updates the info field
-func (o *Object) SetModTime(modTime time.Time) error {
+func (o *Object) SetMeta(modTime time.Time, chgTime time.Time, meta map[string]*string) error {
 	c, err := o.fs.getSftpConnection()
 	if err != nil {
-		return errors.Wrap(err, "SetModTime")
+		return errors.Wrap(err, "SetMeta")
 	}
-	if o.fs.opt.SetModTime {
-		err = c.sftpClient.Chtimes(o.path(), modTime, modTime)
+	if o.fs.opt.SetMeta {
+		err = c.sftpClient.Chtimes(o.path(), modTime, chgTime)
 		o.fs.putSftpConnection(&c, err)
 		if err != nil {
-			return errors.Wrap(err, "SetModTime failed")
+			return errors.Wrap(err, "SetMeta failed")
 		}
 	}
 	err = o.stat()
 	if err != nil {
-		return errors.Wrap(err, "SetModTime stat failed")
+		return errors.Wrap(err, "SetMeta stat failed")
 	}
 	return nil
 }
@@ -1019,9 +1029,9 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 		remove()
 		return errors.Wrap(err, "Update Close failed")
 	}
-	err = o.SetModTime(src.ModTime())
+	err = o.SetMeta(src.ModTime(), src.ChgTime(), src.Meta())
 	if err != nil {
-		return errors.Wrap(err, "Update SetModTime failed")
+		return errors.Wrap(err, "Update SetMeta failed")
 	}
 	return nil
 }
