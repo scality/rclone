@@ -14,6 +14,7 @@ What happens if you CTRL-C a multipart upload
 */
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 	"net/http"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -609,6 +611,8 @@ Use this only if v4 signatures don't work, eg pre Jewel/v10 CEPH.`,
 const (
 	metaMtime      = "Mtime"                       // the meta key to store mtime in - eg X-Amz-Meta-Mtime
 	metaMD5Hash    = "Md5chksum"                   // the meta key to store md5hash in
+	metaSize       = "Size"                        // the meta key to store size in
+	metaMdOnly     = "Mdonly"                      // the meta key to specify that a request is metadata-only
 	listChunkSize  = 1000                          // number of items to read at once
 	maxRetries     = 10                            // number of retries to make of operations
 	maxSizeForCopy = 5 * 1024 * 1024 * 1024        // The maximum size of object we can COPY
@@ -1580,13 +1584,15 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 		metaMtime: aws.String(swift.TimeToFloatString(modTime)),
 	}
 
-	if !o.fs.opt.DisableChecksum && size > uploader.PartSize {
+	if !o.fs.opt.DisableChecksum && size > uploader.PartSize ||
+		fs.Config.MdOnly {
 		hash, err := src.Hash(hash.MD5)
 
-		if err == nil && matchMd5.MatchString(hash) {
+		if err == nil && matchMd5.MatchString(hash) ||
+		    fs.Config.MdOnly{
 			hashBytes, err := hex.DecodeString(hash)
 
-			if err == nil {
+			if err == nil || fs.Config.MdOnly {
 				metadata[metaMD5Hash] = aws.String(base64.StdEncoding.EncodeToString(hashBytes))
 			}
 		}
@@ -1596,30 +1602,56 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 	mimeType := fs.MimeType(src)
 
 	key := o.fs.root + o.remote
-	req := s3manager.UploadInput{
-		Bucket:      &o.fs.bucket,
-		ACL:         &o.fs.opt.ACL,
-		Key:         &key,
-		Body:        in,
-		ContentType: &mimeType,
-		Metadata:    metadata,
-		//ContentLength: &size,
-	}
-	if o.fs.opt.ServerSideEncryption != "" {
-		req.ServerSideEncryption = &o.fs.opt.ServerSideEncryption
-	}
-	if o.fs.opt.SSEKMSKeyID != "" {
-		req.SSEKMSKeyId = &o.fs.opt.SSEKMSKeyID
-	}
-	if o.fs.opt.StorageClass != "" {
-		req.StorageClass = &o.fs.opt.StorageClass
-	}
-	err = o.fs.pacer.CallNoRetry(func() (bool, error) {
+
+	if fs.Config.MdOnly {
+		fs.Debugf(o, "copying MD only")
+		metadata[metaSize] = aws.String(strconv.FormatInt(size, 10))
+		metadata[metaMdOnly] = aws.String("true")
+		req := s3.PutObjectInput{
+			Bucket:        &o.fs.bucket,
+			ACL:           &o.fs.opt.ACL,
+			Key:           &key,
+			Body:          bytes.NewReader([]byte("")),
+			Metadata:      metadata,
+			ContentLength: aws.Int64(0),
+		}
+		if o.fs.opt.ServerSideEncryption != "" {
+			req.ServerSideEncryption = &o.fs.opt.ServerSideEncryption
+		}
+		if o.fs.opt.SSEKMSKeyID != "" {
+			req.SSEKMSKeyId = &o.fs.opt.SSEKMSKeyID
+		}
+		if o.fs.opt.StorageClass != "" {
+			req.StorageClass = &o.fs.opt.StorageClass
+		}
+
+		_, err := o.fs.c.PutObject(&req)
+		if err != nil {
+			return err
+		}
+	} else {
+		req := s3manager.UploadInput{
+			Bucket:      &o.fs.bucket,
+			ACL:         &o.fs.opt.ACL,
+			Key:         &key,
+			Body:        in,
+			ContentType: &mimeType,
+			Metadata:    metadata,
+			//ContentLength: &size,
+		}
+		if o.fs.opt.ServerSideEncryption != "" {
+			req.ServerSideEncryption = &o.fs.opt.ServerSideEncryption
+		}
+		if o.fs.opt.SSEKMSKeyID != "" {
+			req.SSEKMSKeyId = &o.fs.opt.SSEKMSKeyID
+		}
+		if o.fs.opt.StorageClass != "" {
+			req.StorageClass = &o.fs.opt.StorageClass
+		}
 		_, err = uploader.Upload(&req)
-		return shouldRetry(err)
-	})
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 
 	// Read the metadata from the newly created object
