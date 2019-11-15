@@ -613,6 +613,7 @@ const (
 	metaCtime      = "Ctime"                       // the meta key to store ctime in - eg X-Amz-Meta-Ctime
 	metaAtime      = "Atime"                       // the meta key to store atime in - eg X-Amz-Meta-Atime
 	metaMD5Hash    = "Md5chksum"                   // the meta key to store md5hash in
+	metaMD5NumParts = "Md5numparts"                // MPU case etag
 	metaSize       = "Size"                        // the meta key to store size in
 	metaVersionId  = "Version-Id"                  // the meta key to store the source version ID
 	metaMdOnly     = "Mdonly"                      // the meta key to specify that a request is metadata-only
@@ -1364,7 +1365,7 @@ func (o *Object) Remote() string {
 	return o.remote
 }
 
-var matchMd5 = regexp.MustCompile(`^[0-9a-f]{32}$`)
+var matchMd5 = regexp.MustCompile(`^([0-9a-f]{32}-[0-9]*)|([0-9a-f]{32})$`)
 
 // Hash returns the Md5sum of an object returning a lowercase hex string
 func (o *Object) Hash(t hash.Type) (string, error) {
@@ -1634,10 +1635,33 @@ func (o *Object) Update(in io.Reader, src fs.ObjectInfo, options ...fs.OpenOptio
 		fs.Config.MdOnly {
 		hash, err := src.Hash(hash.MD5)
 		if err == nil && matchMd5.MatchString(hash) ||
-		    fs.Config.MdOnly {
-			hashBytes, err := hex.DecodeString(hash)
-			if err == nil || fs.Config.MdOnly {
+			fs.Config.MdOnly {
+			var hashOk bool = false
+			var hashBytes []byte
+			var includeNumParts bool = false
+			var numParts string
+			idx := strings.Index(hash, "-")
+			if idx == -1 {
+				hashBytes, err = hex.DecodeString(hash)
+				if err == nil {
+					hashOk = true
+				}
+			} else {
+				s := strings.Split(hash, "-")
+				hashBytes, err = hex.DecodeString(s[0])
+				if err == nil {
+					hashOk = true
+				}
+				includeNumParts = true
+				numParts = s[1]
+			}
+
+			if hashOk {
 				metadata[metaMD5Hash] = aws.String(base64.StdEncoding.EncodeToString(hashBytes))
+			}
+
+			if includeNumParts {
+				metadata[metaMD5NumParts] = &numParts
 			}
 		}
 	}
